@@ -1,0 +1,358 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// -------------------------------------------------------------
+// ENUMS
+// -------------------------------------------------------------
+
+enum UserRole {
+  MEMBER
+  COORDINATOR
+  ADMIN
+}
+
+enum UserStatus {
+  PENDING_APPROVAL
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum SessionStatus {
+  DRAFT
+  READY_FOR_REVIEW
+  PUBLISHED
+}
+
+enum MatchStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  WALKOVER
+  CANCELLED
+}
+
+enum AvailabilityStatus {
+  AVAILABLE
+  UNAVAILABLE
+  STANDBY
+}
+
+enum SlotWindow {
+  SLOT_1_1800
+  SLOT_2_1930
+}
+
+enum BadmintonDiscipline {
+  MENS_DOUBLES
+  MIXED_DOUBLES
+  WOMENS_DOUBLES
+  SINGLES
+}
+
+// -------------------------------------------------------------
+// CORE ENTITIES (Sport-Agnostic)
+// -------------------------------------------------------------
+
+model User {
+  id           String     @id @default(uuid()) @db.Uuid
+  email        String     @unique
+  phone        String?    @unique
+  fullName     String     @map("full_name")
+  passwordHash String?    @map("password_hash")
+  role         UserRole   @default(MEMBER)
+  status       UserStatus @default(PENDING_APPROVAL)
+  address      String?    @map("address")
+  isOnboarded  Boolean    @default(false) @map("is_onboarded")
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime   @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  sportProfiles           MemberSportProfile[]
+  availabilities          MemberAvailability[]
+  matchParticipantPlayers MatchParticipantPlayer[] @relation("PlayerParticipations")
+  replacedInMatches       MatchParticipantPlayer[] @relation("ReplacedPlayers")
+  publishedSessions       Session[]                @relation("SessionPublisher")
+  verifiedMatches         Match[]                  @relation("MatchVerifier")
+  auditLogs               AuditLog[]
+  refreshTokens           RefreshToken[]
+  oauthAccounts           OAuthAccount[]
+
+  @@map("users")
+}
+
+model OAuthAccount {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  provider       String   @db.VarChar(50)
+  providerUserId String   @map("provider_user_id") @db.VarChar(255)
+  email          String?
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
+  @@map("oauth_accounts")
+}
+
+model RefreshToken {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  tokenHash  String   @map("token_hash")
+  familyId   String   @map("family_id") @db.Uuid
+  isRevoked  Boolean  @default(false) @map("is_revoked")
+  expiresAt  DateTime @map("expires_at") @db.Timestamptz
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  replacedBy String?  @map("replaced_by") @db.Uuid
+  userAgent  String?  @map("user_agent")
+  ipAddress  String?  @map("ip_address")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@index([familyId])
+  @@map("refresh_tokens")
+}
+
+model Sport {
+  id        String   @id @default(uuid()) @db.Uuid
+  slug      String   @unique
+  name      String
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  courts        Court[]
+  competitions  Competition[]
+  divisions     Division[]
+  sessions      Session[]
+  matches       Match[]
+  sportProfiles MemberSportProfile[]
+
+  @@map("sports")
+}
+
+model MemberSportProfile {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  sportId         String   @map("sport_id") @db.Uuid
+  divisionCode    String   @map("division_code") // DIV_A, DIV_B, DIV_C, MIXED
+  skillRating     Decimal? @map("skill_rating") @db.Decimal(5, 2)
+  preferredFlight String?  @default("FLEXIBLE") @map("preferred_flight")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sport Sport @relation(fields: [sportId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sportId])
+  @@map("member_sport_profiles")
+}
+
+model Court {
+  id            String   @id @default(uuid()) @db.Uuid
+  sportId       String   @map("sport_id") @db.Uuid
+  courtNumber   Int      @map("court_number")
+  name          String
+  isOperational Boolean  @default(true) @map("is_operational")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  sport   Sport   @relation(fields: [sportId], references: [id], onDelete: Cascade)
+  matches Match[]
+
+  @@map("courts")
+}
+
+model Competition {
+  id        String    @id @default(uuid()) @db.Uuid
+  sportId   String    @map("sport_id") @db.Uuid
+  title     String
+  type      String    @default("LEAGUE_SEASON")
+  startDate DateTime  @map("start_date") @db.Date
+  endDate   DateTime? @map("end_date") @db.Date
+  status    String    @default("ACTIVE")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  sport     Sport      @relation(fields: [sportId], references: [id], onDelete: Cascade)
+  divisions Division[]
+  sessions  Session[]
+
+  @@map("competitions")
+}
+
+model Division {
+  id            String   @id @default(uuid()) @db.Uuid
+  competitionId String   @map("competition_id") @db.Uuid
+  sportId       String   @map("sport_id") @db.Uuid
+  code          String   // DIV_A, DIV_B, DIV_C, MIXED
+  name          String
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  sport       Sport       @relation(fields: [sportId], references: [id], onDelete: Cascade)
+
+  @@map("divisions")
+}
+
+model Session {
+  id                String        @id @default(uuid()) @db.Uuid
+  competitionId     String        @map("competition_id") @db.Uuid
+  sportId           String        @map("sport_id") @db.Uuid
+  sessionDate       DateTime      @map("session_date") @db.Date
+  startTime         String        @map("start_time") // HH:mm format
+  endTime           String        @map("end_time")   // HH:mm format
+  publicationStatus SessionStatus @default(DRAFT) @map("publication_status")
+  publishedBy       String?       @map("published_by") @db.Uuid
+  publishedAt       DateTime?     @map("published_at") @db.Timestamptz
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  competition Competition          @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  sport       Sport                @relation(fields: [sportId], references: [id], onDelete: Cascade)
+  publisher   User?                @relation("SessionPublisher", fields: [publishedBy], references: [id])
+  matches     Match[]
+  attendees   MemberAvailability[]
+
+  @@map("sessions")
+}
+
+model MemberAvailability {
+  id            String             @id @default(uuid()) @db.Uuid
+  userId        String             @map("user_id") @db.Uuid
+  sessionId     String             @map("session_id") @db.Uuid
+  status        AvailabilityStatus
+  preferredSlot String             @default("EITHER") @map("preferred_slot")
+  notes         String?
+  submittedAt   DateTime           @default(now()) @map("submitted_at") @db.Timestamptz
+
+  // Relations
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sessionId])
+  @@map("member_availabilities")
+}
+
+model Match {
+  id                  String      @id @default(uuid()) @db.Uuid
+  sessionId           String      @map("session_id") @db.Uuid
+  courtId             String      @map("court_id") @db.Uuid
+  sportId             String      @map("sport_id") @db.Uuid
+  slotWindow          SlotWindow  @map("slot_window")
+  matchOrder          Int         @default(1) @map("match_order")
+  status              MatchStatus @default(SCHEDULED)
+  winnerParticipantId String?     @map("winner_participant_id") @db.Uuid
+  verifiedByUserId    String?     @map("verified_by_user_id") @db.Uuid
+  verifiedAt          DateTime?   @map("verified_at") @db.Timestamptz
+  createdAt           DateTime    @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  session        Session                 @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  court          Court                   @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  sport          Sport                   @relation(fields: [sportId], references: [id], onDelete: Cascade)
+  verifiedByUser User?                   @relation("MatchVerifier", fields: [verifiedByUserId], references: [id])
+  participants   MatchParticipant[]
+
+  // Badminton Extensions
+  badmintonDetails BadmintonMatchDetail?
+  badmintonScores  BadmintonSetScore[]
+
+  @@map("matches")
+}
+
+model MatchParticipant {
+  id              String  @id @default(uuid()) @db.Uuid
+  matchId         String  @map("match_id") @db.Uuid
+  side            Int     // 1 or 2
+  teamDisplayName String? @map("team_display_name")
+
+  // Relations
+  match   Match                    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  players MatchParticipantPlayer[]
+
+  @@map("match_participants")
+}
+
+model MatchParticipantPlayer {
+  id             String  @id @default(uuid()) @db.Uuid
+  participantId  String  @map("participant_id") @db.Uuid
+  userId         String  @map("user_id") @db.Uuid
+  isReplacement  Boolean @default(false) @map("is_replacement")
+  replacedUserId String? @map("replaced_user_id") @db.Uuid
+
+  // Relations
+  participant  MatchParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  player       User             @relation("PlayerParticipations", fields: [userId], references: [id], onDelete: Cascade)
+  replacedUser User?            @relation("ReplacedPlayers", fields: [replacedUserId], references: [id])
+
+  @@map("match_participant_players")
+}
+
+// -------------------------------------------------------------
+// BADMINTON EXTENSIONS (Decoupled Module)
+// -------------------------------------------------------------
+
+model BadmintonMatchDetail {
+  matchId          String              @id @map("match_id") @db.Uuid
+  discipline       BadmintonDiscipline @default(MENS_DOUBLES)
+  shuttleBrand     String              @default("Yonex Aerosensa AS-30") @map("shuttle_brand")
+  shuttleCountUsed Int                 @default(1) @map("shuttle_count_used")
+  rulesPreset      String              @default("BWF_STANDARD_21") @map("rules_preset")
+  bestOfSets       Int                 @default(3) @map("best_of_sets")
+
+  // Relations
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@map("badminton_match_details")
+}
+
+model BadmintonSetScore {
+  id                 String  @id @default(uuid()) @db.Uuid
+  matchId            String  @map("match_id") @db.Uuid
+  setNumber          Int     @map("set_number") // 1, 2, or 3
+  side1Score         Int     @map("side1_score")
+  side2Score         Int     @map("side2_score")
+  side1IntervalScore Int?    @map("side1_interval_score")
+  side2IntervalScore Int?    @map("side2_interval_score")
+  winnerSide         Int?    @map("winner_side")
+  durationSeconds    Int?    @map("duration_seconds")
+
+  // Relations
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@map("badminton_set_scores")
+}
+
+// -------------------------------------------------------------
+// AUDIT LOGS
+// -------------------------------------------------------------
+
+model AuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  actorUserId String?  @map("actor_user_id") @db.Uuid
+  action      String
+  entityType  String   @map("entity_type")
+  entityId    String?  @map("entity_id") @db.Uuid
+  beforeState Json?    @map("before_state")
+  afterState  Json?    @map("after_state")
+  ipAddress   String?  @map("ip_address")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  actor User? @relation(fields: [actorUserId], references: [id])
+
+  @@map("audit_logs")
+}
