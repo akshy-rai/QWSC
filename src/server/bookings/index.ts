@@ -70,3 +70,6 @@ export const BOOKING_SLOTS: Record<SlotWindow, { label: string; time: string }> 
   [SlotWindow.SLOT_1_1800]: { label: 'Slot 1', time: '18:00 - 19:30' },
   [SlotWindow.SLOT_2_1930]: { label: 'Slot 2', time: '19:30 - 21:00' },
 };
+
+export * from './court-booking-service';
+

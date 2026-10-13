@@ -232,3 +232,99 @@ export interface AdminMemberItem {
   sportProfiles?: AdminSportProfileItem[];
 }
 
+// -------------------------------------------------------------
+// COURT BOOKING & SCHEDULE CONTRACTS
+// -------------------------------------------------------------
+
+export const BOOKING_STATUSES = ['CONFIRMED', 'CANCELLED'] as const;
+export type BookingStatus = (typeof BOOKING_STATUSES)[number];
+
+export interface CourtDto {
+  id: string;
+  sportId: string;
+  sportSlug: string;
+  sportName: string;
+  courtNumber: number;
+  name: string;
+  isOperational: boolean;
+  createdAt: string;
+}
+
+export interface TimeSlotDto {
+  startTime: string; // ISO string
+  endTime: string;   // ISO string
+  displayStartTime: string; // e.g. "18:00"
+  displayEndTime: string;   // e.g. "19:00"
+  isAvailable: boolean;
+  unavailabilityReason?: 'BOOKED' | 'MAINTENANCE_CLOSURE' | 'OUTSIDE_OPERATING_HOURS' | 'PAST_TIME';
+  existingBookingId?: string;
+  isMyBooking?: boolean;
+}
+
+export interface CourtAvailabilityResponse {
+  date: string; // "YYYY-MM-DD"
+  court: CourtDto;
+  slots: TimeSlotDto[];
+}
+
+export interface BookingDto {
+  id: string;
+  courtId: string;
+  courtName: string;
+  courtNumber: number;
+  sportName: string;
+  sportSlug: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  startTime: string;
+  endTime: string;
+  status: BookingStatus;
+  notes?: string | null;
+  cancelledAt?: string | null;
+  cancelledByUserId?: string | null;
+  cancellationReason?: string | null;
+  canCancel?: boolean;
+  createdAt: string;
+}
+
+export interface CourtClosureDto {
+  id: string;
+  courtId?: string | null;
+  courtName?: string | null;
+  sportId?: string | null;
+  reason: string;
+  startTime: string;
+  endTime: string;
+  createdAt: string;
+}
+
+export const createBookingSchema = z.object({
+  courtId: z.string().uuid('Invalid court ID'),
+  startTime: z.string().datetime({ message: 'Start time must be a valid ISO datetime' }),
+  endTime: z.string().datetime({ message: 'End time must be a valid ISO datetime' }),
+  notes: z.string().trim().max(500, 'Notes must not exceed 500 characters').optional(),
+});
+export type CreateBookingInput = z.infer<typeof createBookingSchema>;
+
+export const cancelBookingSchema = z.object({
+  reason: z.string().trim().max(255, 'Reason must not exceed 255 characters').optional(),
+});
+export type CancelBookingInput = z.infer<typeof cancelBookingSchema>;
+
+export const adminCourtUpdateSchema = z.object({
+  name: z.string().trim().min(1).max(100).optional(),
+  isOperational: z.boolean().optional(),
+});
+export type AdminCourtUpdateInput = z.infer<typeof adminCourtUpdateSchema>;
+
+export const adminCreateClosureSchema = z.object({
+  courtId: z.string().uuid().nullable().optional(),
+  sportId: z.string().uuid().nullable().optional(),
+  reason: z.string().trim().min(2, 'Reason is required').max(255),
+  startTime: z.string().datetime(),
+  endTime: z.string().datetime(),
+});
+export type AdminCreateClosureInput = z.infer<typeof adminCreateClosureSchema>;
+
+

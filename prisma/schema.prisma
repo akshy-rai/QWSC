@@ -56,6 +56,11 @@ enum BadmintonDiscipline {
   SINGLES
 }
 
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+}
+
 // -------------------------------------------------------------
 // CORE ENTITIES (Sport-Agnostic)
 // -------------------------------------------------------------
@@ -83,6 +88,9 @@ model User {
   auditLogs               AuditLog[]
   refreshTokens           RefreshToken[]
   oauthAccounts           OAuthAccount[]
+  courtBookings           CourtBooking[]           @relation("UserBookings")
+  cancelledBookings       CourtBooking[]           @relation("CancelledBookings")
+  createdCourtClosures    CourtClosure[]           @relation("CreatedCourtClosures")
 
   @@map("users")
 }
@@ -131,12 +139,14 @@ model Sport {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   // Relations
-  courts        Court[]
-  competitions  Competition[]
-  divisions     Division[]
-  sessions      Session[]
-  matches       Match[]
-  sportProfiles MemberSportProfile[]
+  courts         Court[]
+  competitions   Competition[]
+  divisions      Division[]
+  sessions       Session[]
+  matches        Match[]
+  sportProfiles  MemberSportProfile[]
+  courtSchedules CourtSchedule[]
+  courtClosures  CourtClosure[]
 
   @@map("sports")
 }
@@ -168,8 +178,11 @@ model Court {
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   // Relations
-  sport   Sport   @relation(fields: [sportId], references: [id], onDelete: Cascade)
-  matches Match[]
+  sport     Sport           @relation(fields: [sportId], references: [id], onDelete: Cascade)
+  matches   Match[]
+  bookings  CourtBooking[]
+  schedules CourtSchedule[]
+  closures  CourtClosure[]
 
   @@map("courts")
 }
@@ -356,3 +369,72 @@ model AuditLog {
 
   @@map("audit_logs")
 }
+
+// -------------------------------------------------------------
+// COURT BOOKING & SCHEDULE MANAGEMENT
+// -------------------------------------------------------------
+
+model CourtBooking {
+  id                 String        @id @default(uuid()) @db.Uuid
+  courtId            String        @map("court_id") @db.Uuid
+  userId             String        @map("user_id") @db.Uuid
+  startTime          DateTime      @map("start_time") @db.Timestamptz
+  endTime            DateTime      @map("end_time") @db.Timestamptz
+  status             BookingStatus @default(CONFIRMED)
+  notes              String?
+  cancelledAt        DateTime?     @map("cancelled_at") @db.Timestamptz
+  cancelledByUserId  String?       @map("cancelled_by_user_id") @db.Uuid
+  cancellationReason String?       @map("cancellation_reason")
+  createdAt          DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  court       Court  @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  user        User   @relation("UserBookings", fields: [userId], references: [id], onDelete: Cascade)
+  cancelledBy User?  @relation("CancelledBookings", fields: [cancelledByUserId], references: [id])
+
+  @@index([courtId, startTime, endTime])
+  @@index([userId, startTime])
+  @@index([status])
+  @@map("court_bookings")
+}
+
+model CourtSchedule {
+  id          String   @id @default(uuid()) @db.Uuid
+  courtId     String?  @map("court_id") @db.Uuid
+  sportId     String?  @map("sport_id") @db.Uuid
+  dayOfWeek   Int      @map("day_of_week") // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  openTime    String   @map("open_time")   // e.g. "08:00"
+  closeTime   String   @map("close_time")  // e.g. "23:00"
+  slotMinutes Int      @default(60) @map("slot_minutes")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  court Court? @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  sport Sport? @relation(fields: [sportId], references: [id], onDelete: Cascade)
+
+  @@index([courtId, dayOfWeek])
+  @@index([sportId, dayOfWeek])
+  @@map("court_schedules")
+}
+
+model CourtClosure {
+  id              String   @id @default(uuid()) @db.Uuid
+  courtId         String?  @map("court_id") @db.Uuid
+  sportId         String?  @map("sport_id") @db.Uuid
+  reason          String
+  startTime       DateTime @map("start_time") @db.Timestamptz
+  endTime         DateTime @map("end_time") @db.Timestamptz
+  createdByUserId String?  @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  court     Court? @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  sport     Sport? @relation(fields: [sportId], references: [id], onDelete: Cascade)
+  createdBy User?  @relation("CreatedCourtClosures", fields: [createdByUserId], references: [id])
+
+  @@index([courtId, startTime, endTime])
+  @@index([sportId, startTime, endTime])
+  @@map("court_closures")
+}
+

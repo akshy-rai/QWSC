@@ -87,10 +87,20 @@ export function Footer() {
             <div className="pt-1 flex flex-wrap items-center gap-2">
               {user && user.status === "ACTIVE" ? (
                 <Link
-                  href={user.role === "ADMIN" ? "/admin" : "/portal"}
+                  href={
+                    user.role === "ADMIN"
+                      ? "/admin"
+                      : user.role === "COORDINATOR"
+                      ? "/coordinator"
+                      : "/member"
+                  }
                   className="rounded-md border border-border-strong bg-club-navy px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-800 transition-colors text-left"
                 >
-                  {user.role === "ADMIN" ? "Admin Console" : "Member Portal"}
+                  {user.role === "ADMIN"
+                    ? "Admin Console"
+                    : user.role === "COORDINATOR"
+                    ? "Coordinator Console"
+                    : "Member Portal"}
                 </Link>
               ) : (
                 <>

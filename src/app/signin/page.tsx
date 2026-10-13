@@ -31,8 +31,10 @@ function SignInContent() {
     if (!authLoading && currentUser && currentUser.status === "ACTIVE") {
       if (currentUser.role === "ADMIN") {
         router.push("/admin");
+      } else if (currentUser.role === "COORDINATOR") {
+        router.push("/coordinator");
       } else {
-        router.push("/portal");
+        router.push("/member");
       }
     }
   }, [currentUser, authLoading, router]);
@@ -119,8 +121,10 @@ function SignInContent() {
       const loggedInUser = await login({ email, password });
       if (loggedInUser.role === "ADMIN") {
         router.push("/admin");
+      } else if (loggedInUser.role === "COORDINATOR") {
+        router.push("/coordinator");
       } else {
-        router.push("/portal");
+        router.push("/member");
       }
     } catch (err) {
       if (err instanceof ApiError) {

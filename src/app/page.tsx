@@ -23,13 +23,25 @@ export default function Home() {
       const hash = window.location.hash.toLowerCase();
       if (hash === "#join" || hash === "#register" || hash === "#inquire") {
         if (user && user.status === "ACTIVE") {
-          router.push(user.role === "ADMIN" ? "/admin" : "/portal");
+          const target =
+            user.role === "ADMIN"
+              ? "/admin"
+              : user.role === "COORDINATOR"
+              ? "/coordinator"
+              : "/member";
+          router.push(target);
         } else {
           router.push("/register");
         }
       } else if (hash === "#signin" || hash === "#login" || hash === "#portal") {
         if (user && user.status === "ACTIVE") {
-          router.push(user.role === "ADMIN" ? "/admin" : "/portal");
+          const target =
+            user.role === "ADMIN"
+              ? "/admin"
+              : user.role === "COORDINATOR"
+              ? "/coordinator"
+              : "/member";
+          router.push(target);
         } else {
           router.push("/signin");
         }

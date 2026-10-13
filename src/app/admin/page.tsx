@@ -19,12 +19,19 @@ import {
   IconX,
   IconUsers,
   IconClock,
+  IconCalendar,
+  IconLayers,
 } from "@/components/icons/Icons";
+import { AdminBookingsTab } from "@/components/admin/AdminBookingsTab";
+import { AdminCourtsTab } from "@/components/admin/AdminCourtsTab";
 
 export default function AdminConsole() {
   const router = useRouter();
   const { user, isLoading, logout } = useAuth();
   const { toggleTheme } = useTheme();
+
+  // Active Admin Console Tab: "members" | "bookings" | "facilities"
+  const [adminTab, setAdminTab] = useState<"members" | "bookings" | "facilities">("members");
 
   // Metrics Overview State
   const [counts, setCounts] = useState<AdminOverviewCounts>({
@@ -68,7 +75,7 @@ export default function AdminConsole() {
       if (!user) {
         router.push("/signin");
       } else if (user.role !== "ADMIN") {
-        router.push("/portal");
+        router.push(user.role === "COORDINATOR" ? "/coordinator" : "/member");
       }
     }
   }, [user, isLoading, router]);
@@ -309,15 +316,62 @@ export default function AdminConsole() {
       </header>
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-club-navy dark:text-blue-400">
-              <IconShieldCheck className="w-4 h-4" />
-              <span>Membership Governance & Roster Review</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-foreground mt-1">
-              Member Approvals & Management
-            </h1>
+        {/* Admin Navigation Tabs */}
+        <div className="border-b border-border-strong flex gap-4 overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => setAdminTab("members")}
+            className={`pb-3 px-1 text-sm font-bold border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 cursor-pointer ${
+              adminTab === "members"
+                ? "border-club-navy dark:border-blue-400 text-club-navy dark:text-blue-400"
+                : "border-transparent text-text-muted hover:text-foreground"
+            }`}
+          >
+            <IconUsers className="w-4 h-4" />
+            Member Approvals
+            {counts.pending > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-500 text-white">
+                {counts.pending}
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setAdminTab("bookings")}
+            className={`pb-3 px-1 text-sm font-bold border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 cursor-pointer ${
+              adminTab === "bookings"
+                ? "border-club-navy dark:border-blue-400 text-club-navy dark:text-blue-400"
+                : "border-transparent text-text-muted hover:text-foreground"
+            }`}
+          >
+            <IconCalendar className="w-4 h-4" />
+            Court Bookings & Reservations
+          </button>
+          <button
+            type="button"
+            onClick={() => setAdminTab("facilities")}
+            className={`pb-3 px-1 text-sm font-bold border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 cursor-pointer ${
+              adminTab === "facilities"
+                ? "border-club-navy dark:border-blue-400 text-club-navy dark:text-blue-400"
+                : "border-transparent text-text-muted hover:text-foreground"
+            }`}
+          >
+            <IconLayers className="w-4 h-4" />
+            Courts & Maintenance Closures
+          </button>
+        </div>
+
+        {adminTab === "members" && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-club-navy dark:text-blue-400">
+                  <IconShieldCheck className="w-4 h-4" />
+                  <span>Membership Governance & Roster Review</span>
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-black text-foreground mt-1">
+                  Member Approvals & Management
+                </h1>
             <p className="text-xs text-text-muted mt-0.5">
               Review incoming public member applications, inspect division preferences, and maintain verified player accounts.
             </p>
@@ -741,7 +795,12 @@ export default function AdminConsole() {
             </div>
           )}
         </div>
-      </main>
+      </div>
+    )}
+
+    {adminTab === "bookings" && <AdminBookingsTab />}
+    {adminTab === "facilities" && <AdminCourtsTab />}
+  </main>
 
       {/* MODAL 1: Member Inspection Dialog */}
       {selectedMember && (

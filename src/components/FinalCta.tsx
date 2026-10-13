@@ -8,8 +8,18 @@ import { useAuth } from "@/context/AuthContext";
 export function FinalCta() {
   const { user } = useAuth();
   const isAuth = Boolean(user && user.status === "ACTIVE");
-  const dashboardHref = user?.role === "ADMIN" ? "/admin" : "/portal";
-  const dashboardLabel = user?.role === "ADMIN" ? "Open Admin Console" : "Go to Member Portal";
+  const dashboardHref =
+    user?.role === "ADMIN"
+      ? "/admin"
+      : user?.role === "COORDINATOR"
+      ? "/coordinator"
+      : "/member";
+  const dashboardLabel =
+    user?.role === "ADMIN"
+      ? "Open Admin Console"
+      : user?.role === "COORDINATOR"
+      ? "Coordinator Console"
+      : "Go to Member Portal";
 
   return (
     <section className="py-20 md:py-28 bg-surface-elevated border-b border-border-subtle">
@@ -29,6 +39,8 @@ export function FinalCta() {
               You are signed in as <strong className="text-foreground">{user?.fullName}</strong>.{" "}
               {user?.role === "ADMIN"
                 ? "Access the administrative management panel to oversee player status, confirm trials, and inspect audit logs."
+                : user?.role === "COORDINATOR"
+                ? "Manage court operations, schedules, maintenance closures, and game reservations."
                 : "Check your court flight assignment, doubles partner pairing, and Friday schedule."}
             </>
           ) : (

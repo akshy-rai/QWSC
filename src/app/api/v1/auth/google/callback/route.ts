@@ -174,7 +174,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       status: user.status,
     });
 
-    const destination = user.role === 'ADMIN' ? '/admin' : '/portal';
+    const destination =
+      user.role === 'ADMIN' ? '/admin' : user.role === 'COORDINATOR' ? '/coordinator' : '/member';
     const res = NextResponse.redirect(new URL(destination, request.url));
     setAuthCookies(res, accessToken, rawRefreshToken);
     res.cookies.set('qwsc_google_oauth', '', { maxAge: 0, path: '/' });

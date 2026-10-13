@@ -39,8 +39,18 @@ export function Navbar() {
     { name: "Member Experience", href: "/#experience" },
   ];
 
-  const dashboardHref = user?.role === "ADMIN" ? "/admin" : "/portal";
-  const dashboardLabel = user?.role === "ADMIN" ? "Admin Console" : "Member Portal";
+  const dashboardHref =
+    user?.role === "ADMIN"
+      ? "/admin"
+      : user?.role === "COORDINATOR"
+      ? "/coordinator"
+      : "/member";
+  const dashboardLabel =
+    user?.role === "ADMIN"
+      ? "Admin Console"
+      : user?.role === "COORDINATOR"
+      ? "Coordinator Console"
+      : "Member Portal";
 
   return (
     <header

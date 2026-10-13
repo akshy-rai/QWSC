@@ -8,8 +8,18 @@ import { useAuth } from "@/context/AuthContext";
 export function Hero() {
   const { user } = useAuth();
   const isAuth = Boolean(user && user.status === "ACTIVE");
-  const dashboardHref = user?.role === "ADMIN" ? "/admin" : "/portal";
-  const dashboardLabel = user?.role === "ADMIN" ? "Open Admin Console" : "Member Portal & Lineups";
+  const dashboardHref =
+    user?.role === "ADMIN"
+      ? "/admin"
+      : user?.role === "COORDINATOR"
+      ? "/coordinator"
+      : "/member";
+  const dashboardLabel =
+    user?.role === "ADMIN"
+      ? "Open Admin Console"
+      : user?.role === "COORDINATOR"
+      ? "Coordinator Console"
+      : "Member Portal & Lineups";
 
   return (
     <section id="top" className="relative pt-12 pb-16 md:pt-16 md:pb-24 border-b border-border-subtle bg-background">
@@ -26,7 +36,15 @@ export function Hero() {
               {isAuth && (
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-[11px] font-bold text-emerald-800 dark:text-emerald-300">
                   <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>Welcome, {user?.fullName.split(" ")[0]} ({user?.role === "ADMIN" ? "Admin" : "Member"})</span>
+                  <span>
+                    Welcome, {user?.fullName.split(" ")[0]} (
+                    {user?.role === "ADMIN"
+                      ? "Admin"
+                      : user?.role === "COORDINATOR"
+                      ? "Coordinator"
+                      : "Member"}
+                    )
+                  </span>
                 </div>
               )}
             </div>

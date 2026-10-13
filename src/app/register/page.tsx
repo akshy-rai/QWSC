@@ -37,8 +37,10 @@ function RegisterContent() {
     if (!authLoading && currentUser && currentUser.status === "ACTIVE") {
       if (currentUser.role === "ADMIN") {
         router.push("/admin");
+      } else if (currentUser.role === "COORDINATOR") {
+        router.push("/coordinator");
       } else {
-        router.push("/portal");
+        router.push("/member");
       }
     }
   }, [currentUser, authLoading, router]);
