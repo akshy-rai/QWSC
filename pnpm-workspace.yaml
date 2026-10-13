@@ -1,6 +1,9 @@
 allowBuilds:
+<<<<<<< HEAD
   '@prisma/client': true
   '@prisma/engines': true
   esbuild: true
   prisma: true
+=======
+>>>>>>> ffe39e2616768b52c8c4adf9a75178293f9cd39d
   unrs-resolver: true
