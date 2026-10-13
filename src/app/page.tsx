@@ -11,24 +11,35 @@ import { HowItWorks } from "@/components/HowItWorks";
 import { FinalCta } from "@/components/FinalCta";
 import { Footer } from "@/components/Footer";
 
+import { useAuth } from "@/context/AuthContext";
+
 export default function Home() {
   const router = useRouter();
+  const { user } = useAuth();
 
   // Check URL hash for direct links like #join or #signin
   useEffect(() => {
     const handleHash = () => {
       const hash = window.location.hash.toLowerCase();
       if (hash === "#join" || hash === "#register" || hash === "#inquire") {
-        router.push("/register");
+        if (user && user.status === "ACTIVE") {
+          router.push(user.role === "ADMIN" ? "/admin" : "/portal");
+        } else {
+          router.push("/register");
+        }
       } else if (hash === "#signin" || hash === "#login" || hash === "#portal") {
-        router.push("/signin");
+        if (user && user.status === "ACTIVE") {
+          router.push(user.role === "ADMIN" ? "/admin" : "/portal");
+        } else {
+          router.push("/signin");
+        }
       }
     };
 
     handleHash();
     window.addEventListener("hashchange", handleHash);
     return () => window.removeEventListener("hashchange", handleHash);
-  }, [router]);
+  }, [router, user]);
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground selection:bg-club-red selection:text-white transition-colors duration-150">

@@ -2,18 +2,33 @@
 
 import React from "react";
 import Link from "next/link";
-import { IconArrowRight, IconMapPin, IconClock } from "./icons/Icons";
+import { IconArrowRight, IconMapPin, IconClock, IconShieldCheck, IconUsers } from "./icons/Icons";
+import { useAuth } from "@/context/AuthContext";
 
 export function Hero() {
+  const { user } = useAuth();
+  const isAuth = Boolean(user && user.status === "ACTIVE");
+  const dashboardHref = user?.role === "ADMIN" ? "/admin" : "/portal";
+  const dashboardLabel = user?.role === "ADMIN" ? "Open Admin Console" : "Member Portal & Lineups";
+
   return (
     <section id="top" className="relative pt-12 pb-16 md:pt-16 md:pb-24 border-b border-border-subtle bg-background">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid gap-12 lg:grid-cols-12 lg:items-center">
           {/* Left Column: Editorial Masthead */}
           <div className="lg:col-span-6 xl:col-span-6 space-y-6">
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-surface-elevated border border-border-subtle text-[11px] font-bold uppercase tracking-widest text-text-muted">
-              <span className="h-2 w-2 rounded-full bg-club-red" />
-              <span>Qatar Wakra Badminton Club • Est. Al Wakra</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-surface-elevated border border-border-subtle text-[11px] font-bold uppercase tracking-widest text-text-muted">
+                <span className="h-2 w-2 rounded-full bg-club-red" />
+                <span>Qatar Wakra Badminton Club • Est. Al Wakra</span>
+              </div>
+
+              {isAuth && (
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-[11px] font-bold text-emerald-800 dark:text-emerald-300">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>Welcome, {user?.fullName.split(" ")[0]} ({user?.role === "ADMIN" ? "Admin" : "Member"})</span>
+                </div>
+              )}
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-foreground leading-[1.08]">
@@ -22,24 +37,59 @@ export function Hero() {
             </h1>
 
             <p className="text-base sm:text-lg text-text-secondary leading-relaxed max-w-xl">
-              Two hundred players, four competitive divisions, and weekly structured doubles sessions at Wakra Sports Complex. Organized pairings, dedicated court time, and fair play for our community.
+              {isAuth ? (
+                <>
+                  Logged in as <strong className="text-foreground">{user?.fullName}</strong>.{" "}
+                  {user?.role === "ADMIN"
+                    ? "Manage weekly court allocations, review pending member registrations, and supervise club sessions."
+                    : "Access your confirmed Friday match schedule, court assignments, and doubles pairings."}
+                </>
+              ) : (
+                "Two hundred players, four competitive divisions, and weekly structured doubles sessions at Wakra Sports Complex. Organized pairings, dedicated court time, and fair play for our community."
+              )}
             </p>
 
             <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-              <Link
-                href="/signin"
-                className="inline-flex items-center justify-center gap-2 rounded-md bg-club-red px-6 py-3.5 text-sm font-bold text-white hover:bg-red-700 transition-colors focus:outline-none focus:ring-2 focus:ring-club-red shadow-xs"
-              >
-                <span>Member Portal & Lineups</span>
-                <IconArrowRight className="w-4 h-4" />
-              </Link>
+              {isAuth ? (
+                <>
+                  <Link
+                    href={dashboardHref}
+                    className="inline-flex items-center justify-center gap-2 rounded-md bg-club-red px-6 py-3.5 text-sm font-bold text-white hover:bg-red-700 transition-colors focus:outline-none focus:ring-2 focus:ring-club-red shadow-xs"
+                  >
+                    {user?.role === "ADMIN" ? (
+                      <IconShieldCheck className="w-4 h-4" />
+                    ) : (
+                      <IconUsers className="w-4 h-4" />
+                    )}
+                    <span>{dashboardLabel}</span>
+                    <IconArrowRight className="w-4 h-4" />
+                  </Link>
 
-              <Link
-                href="/register"
-                className="inline-flex items-center justify-center rounded-md border border-border-strong bg-surface px-5 py-3.5 text-sm font-semibold text-foreground hover:bg-surface-elevated transition-colors focus:outline-none focus:ring-2 focus:ring-club-red"
-              >
-                Join QWBC / Request Trial
-              </Link>
+                  <a
+                    href="#sessions"
+                    className="inline-flex items-center justify-center rounded-md border border-border-strong bg-surface px-5 py-3.5 text-sm font-semibold text-foreground hover:bg-surface-elevated transition-colors focus:outline-none focus:ring-2 focus:ring-club-red"
+                  >
+                    View Friday Schedule
+                  </a>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/signin"
+                    className="inline-flex items-center justify-center gap-2 rounded-md bg-club-red px-6 py-3.5 text-sm font-bold text-white hover:bg-red-700 transition-colors focus:outline-none focus:ring-2 focus:ring-club-red shadow-xs"
+                  >
+                    <span>Member Portal & Lineups</span>
+                    <IconArrowRight className="w-4 h-4" />
+                  </Link>
+
+                  <Link
+                    href="/register"
+                    className="inline-flex items-center justify-center rounded-md border border-border-strong bg-surface px-5 py-3.5 text-sm font-semibold text-foreground hover:bg-surface-elevated transition-colors focus:outline-none focus:ring-2 focus:ring-club-red"
+                  >
+                    Join QWBC / Request Trial
+                  </Link>
+                </>
+              )}
             </div>
 
             <div className="pt-6 border-t border-border-subtle grid grid-cols-3 gap-4 text-xs">

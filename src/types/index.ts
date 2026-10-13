@@ -198,3 +198,37 @@ export interface HealthCheckResponse {
   environment: string;
   version: string;
 }
+
+// Admin Console Metric & Management Types
+export interface AdminOverviewCounts {
+  pending: number;
+  approved: number;
+  rejected: number;
+  suspended: number;
+  total: number;
+}
+
+export interface AdminSportProfileItem {
+  id: string;
+  sportId?: string;
+  divisionCode: string;
+  skillRating?: string | null;
+  preferredFlight?: string | null;
+  matchesPlayed?: number;
+  matchesWon?: number;
+}
+
+export interface AdminMemberItem {
+  id: string;
+  email: string;
+  phone?: string | null;
+  address?: string | null;
+  fullName: string;
+  role: UserRole;
+  status: UserStatus;
+  isOnboarded?: boolean;
+  createdAt: string;
+  updatedAt?: string;
+  sportProfiles?: AdminSportProfileItem[];
+}
+

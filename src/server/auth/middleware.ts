@@ -4,6 +4,8 @@ import { verifyAccessToken, type JwtUserPayload } from './session';
 import { ACCESS_TOKEN_COOKIE, clearAuthCookies } from './cookies';
 import type { UserRole } from '@/types';
 
+import { prisma } from '@/server/db';
+
 export type { JwtUserPayload };
 
 /**
@@ -43,15 +45,24 @@ export async function authenticate(
   try {
     const payload = await verifyAccessToken(token);
 
+    // Synchronize with active database record to invalidate stale sessions immediately
+    const dbUser = await prisma.user.findUnique({
+      where: { id: payload.sub },
+      select: { id: true, status: true, role: true },
+    });
+
+    const currentStatus = dbUser ? dbUser.status : payload.status;
+    const currentRole = dbUser ? dbUser.role : payload.role;
+
     // Enforce account approval / active status
-    if (payload.status !== 'ACTIVE') {
+    if (currentStatus !== 'ACTIVE') {
       return NextResponse.json(
         {
           statusCode: 403,
           error: 'Forbidden',
-          code: `ACCOUNT_${payload.status}`,
+          code: `ACCOUNT_${currentStatus}`,
           message:
-            payload.status === 'PENDING_APPROVAL'
+            currentStatus === 'PENDING_APPROVAL'
               ? 'Your account is pending administrator approval.'
               : 'Your account is inactive or suspended.',
         },
@@ -59,7 +70,11 @@ export async function authenticate(
       );
     }
 
-    return payload;
+    return {
+      ...payload,
+      status: currentStatus,
+      role: currentRole,
+    };
   } catch {
     return NextResponse.json(
       {

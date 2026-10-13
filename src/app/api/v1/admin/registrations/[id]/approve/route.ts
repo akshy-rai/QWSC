@@ -24,6 +24,16 @@ export async function POST(
   const result = await approveRegistration(id, authResult.sub, ip);
 
   if ('error' in result) {
+    if (result.error === 'CANNOT_APPROVE_SELF') {
+      return NextResponse.json(
+        {
+          statusCode: 400,
+          error: 'Bad Request',
+          message: 'Administrators cannot approve their own account.',
+        },
+        { status: 400 }
+      );
+    }
     if (result.error === 'NOT_FOUND') {
       return NextResponse.json(
         {
@@ -40,6 +50,16 @@ export async function POST(
           statusCode: 400,
           error: 'Bad Request',
           message: 'User account is already active.',
+        },
+        { status: 400 }
+      );
+    }
+    if (result.error === 'INVALID_TRANSITION') {
+      return NextResponse.json(
+        {
+          statusCode: 400,
+          error: 'Bad Request',
+          message: 'Cannot approve registration: invalid status transition.',
         },
         { status: 400 }
       );

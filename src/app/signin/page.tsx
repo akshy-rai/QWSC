@@ -24,7 +24,18 @@ import { ApiError } from "@/lib/api";
 function SignInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login } = useAuth();
+  const { login, user: currentUser, isLoading: authLoading } = useAuth();
+
+  // Direct redirection for already-authenticated active users based on role
+  React.useEffect(() => {
+    if (!authLoading && currentUser && currentUser.status === "ACTIVE") {
+      if (currentUser.role === "ADMIN") {
+        router.push("/admin");
+      } else {
+        router.push("/portal");
+      }
+    }
+  }, [currentUser, authLoading, router]);
 
   // Form states
   const [email, setEmail] = useState(() => {
@@ -107,7 +118,7 @@ function SignInContent() {
 
       const loggedInUser = await login({ email, password });
       if (loggedInUser.role === "ADMIN") {
-        router.push("/portal/admin");
+        router.push("/admin");
       } else {
         router.push("/portal");
       }

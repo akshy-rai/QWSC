@@ -7,6 +7,9 @@ import {
   GoogleAuthResponse,
   OnboardInput,
   OnboardResponse,
+  AdminOverviewCounts,
+  AdminMemberItem,
+  UserStatus,
 } from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
@@ -146,6 +149,38 @@ export const adminApi = {
     users: AuthUser[];
   }> {
     return request('/api/v1/admin/pending-registrations', {
+      method: 'GET',
+    });
+  },
+
+  async getOverviewCounts(): Promise<{ status: string; counts: AdminOverviewCounts }> {
+    return request('/api/v1/admin/overview', {
+      method: 'GET',
+    });
+  },
+
+  async getMembers(params?: {
+    status?: UserStatus | 'ALL';
+    search?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{
+    status: string;
+    members: AdminMemberItem[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  }> {
+    const searchParams = new URLSearchParams();
+    if (params?.status) searchParams.set('status', params.status);
+    if (params?.search) searchParams.set('search', params.search);
+    if (params?.page) searchParams.set('page', params.page.toString());
+    if (params?.limit) searchParams.set('limit', params.limit.toString());
+    const query = searchParams.toString();
+    return request(`/api/v1/admin/members${query ? `?${query}` : ''}`, {
       method: 'GET',
     });
   },

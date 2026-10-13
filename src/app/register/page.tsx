@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useId, Suspense } from "react";
+import React, { useState, useId, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   IconMapPin,
   IconPhone,
@@ -28,8 +28,20 @@ import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import { ApiError } from "@/lib/api";
 
 function RegisterContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const { register, onboard } = useAuth();
+  const { register, onboard, user: currentUser, isLoading: authLoading } = useAuth();
+
+  // Redirect authenticated active users directly based on role
+  useEffect(() => {
+    if (!authLoading && currentUser && currentUser.status === "ACTIVE") {
+      if (currentUser.role === "ADMIN") {
+        router.push("/admin");
+      } else {
+        router.push("/portal");
+      }
+    }
+  }, [currentUser, authLoading, router]);
 
   const isDirectOnboard =
     (searchParams.get("step") === "onboard" || searchParams.get("step") === "onboarding") &&

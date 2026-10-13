@@ -10,7 +10,6 @@ import {
   IconSun,
   IconMoon,
   IconUsers,
-  IconShieldCheck,
   IconCalendar,
   IconTrophy,
 } from "@/components/icons/Icons";
@@ -21,8 +20,12 @@ export default function PortalDashboard() {
   const { toggleTheme } = useTheme();
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      router.push("/signin");
+    if (!isLoading) {
+      if (!user || user.status !== "ACTIVE") {
+        router.push("/signin");
+      } else if (user.role === "ADMIN") {
+        router.push("/admin");
+      }
     }
   }, [user, isLoading, router]);
 
@@ -37,7 +40,7 @@ export default function PortalDashboard() {
     );
   }
 
-  if (!user) {
+  if (!user || user.status !== "ACTIVE" || user.role === "ADMIN") {
     return null;
   }
 
@@ -82,15 +85,6 @@ export default function PortalDashboard() {
               <IconSun className="w-4 h-4 text-amber-400 hidden dark:block" />
               <IconMoon className="w-4 h-4 text-slate-700 block dark:hidden" />
             </button>
-
-            {user.role === "ADMIN" && (
-              <Link
-                href="/portal/admin"
-                className="rounded-md border border-club-navy bg-club-navy/10 px-3 py-1.5 text-xs font-bold text-club-navy dark:text-blue-400 hover:bg-club-navy/20 transition-colors"
-              >
-                Admin Console
-              </Link>
-            )}
 
             <button
               type="button"
@@ -139,32 +133,6 @@ export default function PortalDashboard() {
           </div>
         </div>
 
-        {/* Admin Quick Action Card (if user is ADMIN) */}
-        {user.role === "ADMIN" && (
-          <div className="rounded-lg border border-club-navy/40 bg-club-navy/5 dark:bg-blue-950/20 p-6">
-            <div className="flex items-start gap-4">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-club-navy text-white">
-                <IconShieldCheck className="w-5 h-5" />
-              </div>
-              <div className="flex-1 space-y-1">
-                <h3 className="text-base font-bold text-foreground">
-                  Administrator Registration Review
-                </h3>
-                <p className="text-xs text-text-secondary leading-relaxed">
-                  As an administrator, you are authorized to inspect pending public membership registrations and activate or reject accounts.
-                </p>
-                <div className="pt-2">
-                  <Link
-                    href="/portal/admin"
-                    className="inline-flex items-center gap-2 rounded-md bg-club-navy px-4 py-2 text-xs font-bold text-white hover:bg-blue-800 transition-colors shadow-xs"
-                  >
-                    Open Pending Registrations Console
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Member Modules Grid */}
         <div className="grid gap-6 md:grid-cols-3">

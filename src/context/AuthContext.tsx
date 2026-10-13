@@ -19,21 +19,46 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("qwbc_user");
+        return saved ? JSON.parse(saved) : null;
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  });
   const [isLoading, setIsLoading] = useState(true);
+
+  const saveUser = (u: AuthUser | null) => {
+    setUser(u);
+    if (typeof window !== "undefined") {
+      try {
+        if (u) {
+          localStorage.setItem("qwbc_user", JSON.stringify(u));
+        } else {
+          localStorage.removeItem("qwbc_user");
+        }
+      } catch {
+        // ignore storage errors
+      }
+    }
+  };
 
   // Initialize and check current session
   const refreshUser = async () => {
     try {
       const res = await authApi.getMe();
-      setUser(res.user);
+      saveUser(res.user);
     } catch {
       // Try refresh token if access token expired
       try {
         const refreshRes = await authApi.refresh();
-        setUser(refreshRes.user);
+        saveUser(refreshRes.user);
       } catch {
-        setUser(null);
+        saveUser(null);
       }
     } finally {
       setIsLoading(false);
@@ -45,13 +70,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const initAuth = async () => {
       try {
         const res = await authApi.getMe();
-        if (!ignore) setUser(res.user);
+        if (!ignore) saveUser(res.user);
       } catch {
         try {
           const refreshRes = await authApi.refresh();
-          if (!ignore) setUser(refreshRes.user);
+          if (!ignore) saveUser(refreshRes.user);
         } catch {
-          if (!ignore) setUser(null);
+          if (!ignore) saveUser(null);
         }
       } finally {
         if (!ignore) setIsLoading(false);
@@ -66,7 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (data: LoginInput): Promise<AuthUser> => {
     const res = await authApi.login(data);
-    setUser(res.user);
+    saveUser(res.user);
     return res.user;
   };
 
@@ -78,7 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const onboard = async (data: OnboardInput): Promise<OnboardResponse> => {
     const res = await authApi.onboard(data);
     if (res.user && user && user.id === res.user.id) {
-      setUser(res.user);
+      saveUser(res.user);
     }
     return res;
   };
@@ -87,14 +112,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await authApi.logout();
     } finally {
-      setUser(null);
+      saveUser(null);
     }
   };
 
   const googleSignIn = async (idToken: string, nonce?: string): Promise<GoogleAuthResponse> => {
     const res = await authApi.googleAuth({ idToken, nonce });
     if (res.status === 'ok' && res.user) {
-      setUser(res.user);
+      saveUser(res.user);
     }
     return res;
   };
@@ -102,7 +127,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const linkGoogleAccount = async (idToken: string, password?: string): Promise<GoogleAuthResponse> => {
     const res = await authApi.googleLink({ idToken, password });
     if (res.status === 'ok' && res.user) {
-      setUser(res.user);
+      saveUser(res.user);
     }
     return res;
   };

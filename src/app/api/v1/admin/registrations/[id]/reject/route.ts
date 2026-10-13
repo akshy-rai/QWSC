@@ -34,15 +34,47 @@ export async function POST(
 
   const result = await rejectRegistration(id, authResult.sub, ip, reason);
 
-  if ('error' in result && result.error === 'NOT_FOUND') {
-    return NextResponse.json(
-      {
-        statusCode: 404,
-        error: 'Not Found',
-        message: 'User not found.',
-      },
-      { status: 404 }
-    );
+  if ('error' in result) {
+    if (result.error === 'CANNOT_REJECT_SELF') {
+      return NextResponse.json(
+        {
+          statusCode: 400,
+          error: 'Bad Request',
+          message: 'Administrators cannot reject their own account.',
+        },
+        { status: 400 }
+      );
+    }
+    if (result.error === 'NOT_FOUND') {
+      return NextResponse.json(
+        {
+          statusCode: 404,
+          error: 'Not Found',
+          message: 'User not found.',
+        },
+        { status: 404 }
+      );
+    }
+    if (result.error === 'ALREADY_INACTIVE') {
+      return NextResponse.json(
+        {
+          statusCode: 400,
+          error: 'Bad Request',
+          message: 'This registration has already been rejected or marked inactive.',
+        },
+        { status: 400 }
+      );
+    }
+    if (result.error === 'INVALID_TRANSITION') {
+      return NextResponse.json(
+        {
+          statusCode: 400,
+          error: 'Bad Request',
+          message: 'Cannot reject registration: invalid status transition.',
+        },
+        { status: 400 }
+      );
+    }
   }
 
   if (!result.user) {

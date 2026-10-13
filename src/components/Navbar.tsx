@@ -3,15 +3,18 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { IconMenu, IconX, IconSun, IconMoon } from "./icons/Icons";
+import { usePathname, useRouter } from "next/navigation";
+import { IconMenu, IconX, IconSun, IconMoon, IconShieldCheck, IconUsers } from "./icons/Icons";
 import { useTheme } from "./ThemeProvider";
+import { useAuth } from "@/context/AuthContext";
 
 export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { toggleTheme } = useTheme();
+  const { user, logout } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
 
   const isSignIn = pathname === "/signin";
   const isRegister = pathname === "/register";
@@ -24,12 +27,20 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  const handleLogout = async () => {
+    await logout();
+    router.push("/");
+  };
+
   const navLinks = [
     { name: "About", href: "/#about" },
     { name: "Sessions & Venue", href: "/#sessions" },
     { name: "Divisions", href: "/#divisions" },
     { name: "Member Experience", href: "/#experience" },
   ];
+
+  const dashboardHref = user?.role === "ADMIN" ? "/admin" : "/portal";
+  const dashboardLabel = user?.role === "ADMIN" ? "Admin Console" : "Member Portal";
 
   return (
     <header
@@ -101,16 +112,56 @@ export function Navbar() {
             <IconMoon className="w-4 h-4 text-slate-700 block dark:hidden" />
           </button>
 
-          <Link
-            href="/signin"
-            className={`rounded-lg px-4 py-2 text-xs font-bold transition-all focus:outline-none focus:ring-2 focus:ring-club-red shadow-xs ${
-              isSignIn || isRegister
-                ? "bg-club-red text-white ring-2 ring-club-red/30 shadow-md shadow-club-red/20"
-                : "bg-club-red text-white hover:bg-red-700 hover:shadow-md"
-            }`}
-          >
-            Sign In / Register
-          </Link>
+          {user && user.status === "ACTIVE" ? (
+            /* Logged-In User Action & Profile Badge */
+            <div className="flex items-center gap-2.5">
+              <Link
+                href={dashboardHref}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border-strong bg-surface hover:bg-surface-elevated transition-colors text-xs font-semibold text-foreground"
+              >
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-club-navy/10 text-club-navy dark:text-blue-400 font-bold text-[11px]">
+                  {user.fullName.charAt(0).toUpperCase()}
+                </div>
+                <span className="max-w-[120px] truncate">{user.fullName.split(" ")[0]}</span>
+                <span
+                  className={`text-[9px] font-bold uppercase px-1.5 py-0.2 rounded ${
+                    user.role === "ADMIN"
+                      ? "bg-club-navy text-white"
+                      : "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300"
+                  }`}
+                >
+                  {user.role}
+                </span>
+              </Link>
+
+              <Link
+                href={dashboardHref}
+                className="rounded-lg bg-club-navy hover:bg-blue-800 text-white px-3.5 py-2 text-xs font-bold transition-all shadow-xs"
+              >
+                {dashboardLabel}
+              </Link>
+
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="rounded-lg border border-border-subtle bg-surface hover:bg-surface-elevated px-3 py-2 text-xs font-semibold text-text-muted hover:text-foreground transition-colors cursor-pointer"
+              >
+                Sign Out
+              </button>
+            </div>
+          ) : (
+            /* Guest / Signed Out Button */
+            <Link
+              href="/signin"
+              className={`rounded-lg px-4 py-2 text-xs font-bold transition-all focus:outline-none focus:ring-2 focus:ring-club-red shadow-xs ${
+                isSignIn || isRegister
+                  ? "bg-club-red text-white ring-2 ring-club-red/30 shadow-md shadow-club-red/20"
+                  : "bg-club-red text-white hover:bg-red-700 hover:shadow-md"
+              }`}
+            >
+              Sign In / Register
+            </Link>
+          )}
         </div>
 
         {/* Mobile Header Controls */}
@@ -119,7 +170,7 @@ export function Navbar() {
           <button
             type="button"
             onClick={toggleTheme}
-            className="flex h-8 w-8 items-center justify-center rounded-md border border-border-subtle bg-surface text-text-secondary hover:text-foreground transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-md border border-border-subtle bg-surface text-text-secondary hover:text-foreground transition-colors cursor-pointer"
             aria-label="Toggle appearance"
             title="Toggle appearance"
           >
@@ -127,17 +178,26 @@ export function Navbar() {
             <IconMoon className="w-3.5 h-3.5 text-slate-700 block dark:hidden" />
           </button>
 
-          <Link
-            href="/signin"
-            className="rounded-md bg-club-red px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700 transition-colors"
-          >
-            Sign In / Register
-          </Link>
+          {user && user.status === "ACTIVE" ? (
+            <Link
+              href={dashboardHref}
+              className="rounded-md bg-club-navy px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-800 transition-colors"
+            >
+              {user.role === "ADMIN" ? "Admin" : "Portal"}
+            </Link>
+          ) : (
+            <Link
+              href="/signin"
+              className="rounded-md bg-club-red px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700 transition-colors"
+            >
+              Sign In
+            </Link>
+          )}
 
           <button
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-1.5 rounded-md text-text-secondary hover:text-foreground focus:outline-none focus:ring-2 focus:ring-club-red transition-colors"
+            className="p-1.5 rounded-md text-text-secondary hover:text-foreground focus:outline-none focus:ring-2 focus:ring-club-red transition-colors cursor-pointer"
             aria-expanded={mobileMenuOpen}
             aria-label="Toggle navigation menu"
           >
@@ -149,6 +209,29 @@ export function Navbar() {
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
         <div className="sm:hidden border-b border-border-subtle bg-surface px-4 py-4 space-y-3">
+          {user && user.status === "ACTIVE" && (
+            <div className="p-3 rounded-xl bg-surface-elevated border border-border-subtle flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-club-navy/10 text-club-navy font-bold text-xs">
+                  {user.fullName.charAt(0).toUpperCase()}
+                </div>
+                <div className="space-y-0.5">
+                  <div className="text-xs font-bold text-foreground">{user.fullName}</div>
+                  <div className="text-[10px] text-text-muted">{user.email}</div>
+                </div>
+              </div>
+              <span
+                className={`text-[9px] font-bold uppercase px-1.5 py-0.2 rounded ${
+                  user.role === "ADMIN"
+                    ? "bg-club-navy text-white"
+                    : "bg-emerald-100 text-emerald-800"
+                }`}
+              >
+                {user.role}
+              </span>
+            </div>
+          )}
+
           <nav className="flex flex-col space-y-2">
             {navLinks.map((link) => (
               <Link
@@ -163,13 +246,41 @@ export function Navbar() {
           </nav>
 
           <div className="pt-3 border-t border-border-subtle flex flex-col gap-2">
-            <Link
-              href="/signin"
-              onClick={() => setMobileMenuOpen(false)}
-              className="w-full rounded-lg bg-club-red py-2.5 text-xs font-bold text-white hover:bg-red-700 transition-colors text-center shadow-xs"
-            >
-              Sign In / Register
-            </Link>
+            {user && user.status === "ACTIVE" ? (
+              <>
+                <Link
+                  href={dashboardHref}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full rounded-lg bg-club-navy py-2.5 text-xs font-bold text-white hover:bg-blue-800 transition-colors text-center shadow-xs flex items-center justify-center gap-2"
+                >
+                  {user.role === "ADMIN" ? (
+                    <IconShieldCheck className="w-4 h-4" />
+                  ) : (
+                    <IconUsers className="w-4 h-4" />
+                  )}
+                  <span>Open {dashboardLabel}</span>
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    handleLogout();
+                  }}
+                  className="w-full rounded-lg border border-border-strong bg-surface py-2.5 text-xs font-semibold text-text-muted hover:text-foreground transition-colors text-center cursor-pointer"
+                >
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <Link
+                href="/signin"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full rounded-lg bg-club-red py-2.5 text-xs font-bold text-white hover:bg-red-700 transition-colors text-center shadow-xs"
+              >
+                Sign In / Register
+              </Link>
+            )}
           </div>
         </div>
       )}

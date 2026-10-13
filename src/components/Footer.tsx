@@ -5,10 +5,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { useTheme } from "./ThemeProvider";
 import { IconSun, IconMoon } from "./icons/Icons";
+import { useAuth } from "@/context/AuthContext";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
   const { toggleTheme } = useTheme();
+  const { user } = useAuth();
 
   return (
     <footer className="bg-surface text-text-secondary border-t border-border-subtle">
@@ -83,18 +85,29 @@ export function Footer() {
             </p>
 
             <div className="pt-1 flex flex-wrap items-center gap-2">
-              <Link
-                href="/signin"
-                className="rounded-md border border-border-strong bg-surface-elevated px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-surface transition-colors text-left"
-              >
-                Member Sign In
-              </Link>
-              <Link
-                href="/register"
-                className="rounded-md border border-border-strong bg-surface-elevated px-3 py-1.5 text-xs font-semibold text-club-red hover:bg-surface transition-colors text-left"
-              >
-                Join / Trial Request
-              </Link>
+              {user && user.status === "ACTIVE" ? (
+                <Link
+                  href={user.role === "ADMIN" ? "/admin" : "/portal"}
+                  className="rounded-md border border-border-strong bg-club-navy px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-800 transition-colors text-left"
+                >
+                  {user.role === "ADMIN" ? "Admin Console" : "Member Portal"}
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href="/signin"
+                    className="rounded-md border border-border-strong bg-surface-elevated px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-surface transition-colors text-left"
+                  >
+                    Member Sign In
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="rounded-md border border-border-strong bg-surface-elevated px-3 py-1.5 text-xs font-semibold text-club-red hover:bg-surface transition-colors text-left"
+                  >
+                    Join / Trial Request
+                  </Link>
+                </>
+              )}
 
               {/* Theme toggle in footer */}
               <button
